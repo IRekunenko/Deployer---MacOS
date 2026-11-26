@@ -37,13 +37,23 @@ Mac (Deployer)                     Git-сервіс                     Серв
                                                                    → команда після деплою
 ```
 
+## Завантажити
+
+Завантажте останній **`Deployer-x.y.z-macOS.zip`** з [Releases](https://github.com/IRekunenko/Deployer---MacOS/releases/latest), розпакуйте й перенесіть **Deployer.app** у «Програми». Універсальна збірка: Apple Silicon та Intel.
+
+- Deployer використовує системні `python3` і `git`, тому потрібні Xcode Command Line Tools: `xcode-select --install`.
+- Застосунок не нотаризований Apple, тож macOS заблокує перший запуск. Відкрийте *Системні параметри → Конфіденційність і безпека* і натисніть **Все одно відкрити**, або виконайте:
+  ```bash
+  xattr -dr com.apple.quarantine /Applications/Deployer.app
+  ```
+
 ## Вимоги
 
 - macOS 12 або новіша
 - Xcode Command Line Tools (`xcode-select --install`): дають `git`, `python3` і `swiftc`
 - На сервері: доступ по SSH, `git`, `rsync` (і `mysqldump` для бекапів БД)
 
-## Встановлення
+## Збирання з вихідного коду
 
 ```bash
 git clone https://github.com/IRekunenko/Deployer---MacOS.git

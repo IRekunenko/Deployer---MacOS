@@ -37,13 +37,23 @@ Deploy ──► SSH ───────────────────�
                                                                    → post-deploy command
 ```
 
+## Download
+
+Get the latest **`Deployer-x.y.z-macOS.zip`** from [Releases](https://github.com/IRekunenko/Deployer---MacOS/releases/latest), unzip it and move **Deployer.app** to *Applications*. Universal build: Apple Silicon and Intel.
+
+- Deployer uses the system `python3` and `git`, so the Xcode Command Line Tools are required: `xcode-select --install`.
+- The app is not notarized by Apple, so macOS blocks the first launch. Open *System Settings → Privacy & Security* and click **Open Anyway**, or run:
+  ```bash
+  xattr -dr com.apple.quarantine /Applications/Deployer.app
+  ```
+
 ## Requirements
 
 - macOS 12 or later
 - Xcode Command Line Tools (`xcode-select --install`): provides `git`, `python3` and `swiftc`
 - On the server: SSH access, `git`, `rsync` (and `mysqldump` for database backups)
 
-## Install
+## Build from source
 
 ```bash
 git clone https://github.com/IRekunenko/Deployer---MacOS.git

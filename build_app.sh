@@ -2,6 +2,7 @@
 # Builds the native Deployer.app into dist/.
 #   ./build_app.sh            — build into dist/
 #   ./build_app.sh --install  — build and install into /Applications (replacing the old version)
+#   ./build_app.sh --release  — build a universal (Apple Silicon + Intel) zip for GitHub Releases
 # Requires the Xcode Command Line Tools (swiftc, python3):  xcode-select --install
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -34,9 +35,19 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </dict></plist>
 PLIST
 
-echo "→ Compiling…"
-swiftc -O -swift-version 5 macos/main.swift -o "$APP/Contents/MacOS/Deployer" \
-  -framework Cocoa -framework WebKit 2>&1 | grep -v "warning:" | grep -vE "^\s*(\||[0-9]+ \|)" || true
+echo "→ Compiling (arm64 + x86_64)…"
+BIN="$(mktemp -d)"
+for arch in arm64 x86_64; do
+  swiftc -O -swift-version 5 -target "$arch-apple-macos12" macos/main.swift -o "$BIN/$arch" \
+    -framework Cocoa -framework WebKit 2>&1 | grep -v "warning:" | grep -vE "^\s*(\||[0-9]+ \|)" || true
+done
+if [ -x "$BIN/arm64" ] && [ -x "$BIN/x86_64" ]; then
+  lipo -create "$BIN/arm64" "$BIN/x86_64" -output "$APP/Contents/MacOS/Deployer"
+elif [ -x "$BIN/arm64" ] || [ -x "$BIN/x86_64" ]; then
+  cp "$BIN/$( [ -x "$BIN/arm64" ] && echo arm64 || echo x86_64 )" "$APP/Contents/MacOS/Deployer"
+  echo "⚠️  Built for one architecture only"
+fi
+rm -rf "$BIN"
 [ -x "$APP/Contents/MacOS/Deployer" ] || { echo "❌ Compilation failed"; exit 1; }
 
 # App icon (drawn with AppKit)
@@ -50,6 +61,14 @@ rm -rf "$TMP"
 
 codesign --force --deep -s - "$APP" >/dev/null 2>&1 || true
 echo "✅ Built: $(pwd)/$APP"
+
+if [ "${1:-}" = "--release" ]; then
+  ZIP="dist/Deployer-${VERSION}-macOS.zip"
+  rm -f "$ZIP"
+  ditto -c -k --norsrc --noextattr --keepParent "$APP" "$ZIP"
+  echo "✅ Release archive: $(pwd)/$ZIP"
+  shasum -a 256 "$ZIP"
+fi
 
 if [ "${1:-}" = "--install" ]; then
   osascript -e 'tell application id "local.deployer" to quit' >/dev/null 2>&1 || true
