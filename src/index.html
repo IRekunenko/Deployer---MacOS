@@ -1,0 +1,923 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Deployer</title>
+<style>
+:root{
+  --bg:#f4f5f7;--panel:#fff;--panel2:#f9fafb;--text:#1c1f24;--muted:#6b7280;--border:#e2e5e9;
+  --accent:#2563eb;--accent-text:#fff;--dev:#059669;--prod:#dc2626;--warn:#b45309;
+  --log-bg:#0f141a;--log-text:#d7dde5;--ok:#34d399;--err:#f87171;--wrn:#fbbf24;--info:#93c5fd;
+  --radius:10px;--shadow:0 1px 2px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#111418;--panel:#191d23;--panel2:#1f242b;--text:#e6e8eb;--muted:#9aa3ae;--border:#2b313a;
+  --accent:#3b82f6;--dev:#34d399;--prod:#f87171;--warn:#fbbf24;--log-bg:#0a0d11;--shadow:none;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12.5px}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+
+header{height:52px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--border);background:var(--panel)}
+header h1{font-size:16px;margin:0 auto 0 0;font-weight:650;letter-spacing:.2px}
+header h1 span{color:var(--accent)}
+header select{width:auto;padding:5px 8px}
+
+.layout{display:grid;grid-template-columns:230px 1fr;height:calc(100% - 52px)}
+aside{border-right:1px solid var(--border);background:var(--panel);overflow:auto;padding:10px}
+aside .item{display:block;width:100%;text-align:left;padding:9px 11px;border:0;border-radius:8px;background:none;cursor:pointer;margin-bottom:2px}
+aside .item:hover{background:var(--panel2)}
+aside .item.active{background:var(--accent);color:var(--accent-text)}
+aside .item .sub{display:block;font-size:11.5px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+aside .empty{padding:12px;color:var(--muted);font-size:13px}
+main{overflow:auto;padding:18px 20px 20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+
+.btn{border:1px solid var(--border);background:var(--panel);padding:6px 12px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--panel2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{background:var(--prod);border-color:var(--prod);color:#fff}
+.btn.ghost{border-color:transparent;background:none}
+.btn.link{border:0;background:none;color:var(--accent);padding:2px 4px}
+.btn:disabled{opacity:.45;cursor:default;filter:none}
+
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px}
+.phead{display:flex;align-items:flex-start;gap:12px}
+.phead h2{margin:0 0 2px;font-size:19px}
+.phead .grow{flex:1;min-width:0}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:99px;background:var(--panel2);border:1px solid var(--border);font-size:12px}
+.badge.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent)}
+.badge.err{color:var(--prod);border-color:color-mix(in srgb,var(--prod) 40%,transparent)}
+
+.envs{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.env{border-top:4px solid var(--dev)}
+.env.protect{border-top-color:var(--prod)}
+.env .ehead{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.env .tag{font-weight:700;font-size:15px}
+.env.protect .tag{color:var(--prod)}
+.env:not(.protect) .tag{color:var(--dev)}
+.env .row{display:flex;gap:8px;align-items:center;margin-top:10px}
+.env input[type=text]{flex:1;min-width:0}
+.env .info{margin-top:6px;font-size:12.5px;min-height:18px}
+.env .btns{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.env .btns .btn.primary,.env .btns .btn.danger{margin-left:auto}
+
+input[type=text],input[type=number],input[type=password],select,textarea{
+  width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:7px;background:var(--panel2);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:60px}
+label.chk{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}
+
+.logwrap{display:flex;flex-direction:column;min-height:260px;flex:1}
+.loghead{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--log-bg);color:var(--log-text);border-radius:var(--radius) var(--radius) 0 0;font-size:12.5px}
+.loghead .title{flex:1}
+.loghead .btn{background:transparent;color:var(--log-text);border-color:#334;padding:2px 8px;font-size:12px}
+#log{flex:1;margin:0;padding:10px 12px 14px;background:var(--log-bg);color:var(--log-text);border-radius:0 0 var(--radius) var(--radius);overflow:auto;white-space:pre-wrap;word-break:break-word;min-height:220px;max-height:60vh}
+.dlglog{min-height:90px;max-height:240px;margin:0;padding:10px 12px;background:var(--log-bg);color:var(--log-text);border-radius:0 0 var(--radius) var(--radius);overflow:auto;white-space:pre-wrap}
+pre .ok{color:var(--ok)}pre .err{color:var(--err)}pre .wrn{color:var(--wrn)}pre .info{color:var(--info)}pre .hd{color:#fff;font-weight:600}
+.status-pill{padding:1px 8px;border-radius:99px;font-size:11.5px;font-weight:600}
+.status-pill.run{background:#1e3a8a;color:#bfdbfe}.status-pill.ok{background:#064e3b;color:#a7f3d0}.status-pill.fail{background:#7f1d1d;color:#fecaca}
+
+.gitrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.gitrow+.gitrow{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.gitrow .lbl{font-weight:600;min-width:100px}
+.gitrow input[type=text]{flex:1;min-width:200px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border:1px solid var(--border);border-radius:99px;background:var(--panel2);font-size:12.5px;cursor:pointer}
+.chip .st{color:var(--muted)}.chip .st.warn{color:var(--warn)}.chip .st.ok{color:var(--dev)}
+.chip .srv{font-size:11px;padding:0 6px;border-radius:99px;background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.rrow{display:grid;grid-template-columns:120px 110px 1fr auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.rrow:last-child{border-bottom:0}
+.rrow .url{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty-main{margin:auto;text-align:center;max-width:440px;color:var(--muted)}
+.empty-main h2{color:var(--text)}
+
+dialog{border:1px solid var(--border);border-radius:14px;padding:0;background:var(--panel);color:var(--text);width:min(820px,94vw);max-height:90vh;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+.dlg{display:flex;flex-direction:column;max-height:90vh}
+.dlg-head{display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border)}
+.dlg-head h3{margin:0;font-size:16px;flex:1}
+.dlg-body{padding:16px 18px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.dlg-foot{display:flex;gap:8px;align-items:center;padding:12px 18px;border-top:1px solid var(--border)}
+.dlg-foot .err{color:var(--prod);flex:1;font-size:13px}
+.dlg-foot .spacer{flex:1}
+.stack{display:flex;flex-direction:column;gap:14px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f>span{font-size:12px;color:var(--muted)}
+.c12{grid-column:span 12}.c9{grid-column:span 9}.c8{grid-column:span 8}.c6{grid-column:span 6}.c4{grid-column:span 4}.c3{grid-column:span 3}.c2{grid-column:span 2}.c1{grid-column:span 1}
+.sub-card{border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--panel2)}
+.sub-card input,.sub-card select,.sub-card textarea{background:var(--panel)}
+.sub-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.sub-head b{flex:1}
+.section-title{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:4px 0 -4px}
+.keybox{font-family:ui-monospace,Menlo,monospace;font-size:12px;word-break:break-all;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px}
+.hint{font-size:12.5px;color:var(--muted)}
+.inline{display:flex;gap:6px}
+.inline input,.inline select{flex:1}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚡ <span>Deployer</span></h1>
+  <button class="btn" id="btnServers" data-i18n="🖥 Servers"></button>
+  <button class="btn" id="btnGit" data-i18n="⎇ Git"></button>
+  <button class="btn" id="btnNewProject" data-i18n="＋ Project"></button>
+  <select id="langSel" title="Language">
+    <option value="en">EN</option><option value="uk">UA</option><option value="ru">RU</option>
+  </select>
+  <button class="btn ghost" id="btnQuit" data-i18n-title="Stop Deployer">⏻</button>
+</header>
+<div class="layout">
+  <aside id="projects"></aside>
+  <main id="main"></main>
+</div>
+
+<!-- Servers -->
+<dialog id="dlgServers"><div class="dlg">
+  <div class="dlg-head"><h3 data-i18n="Servers"></h3><button class="btn ghost" data-close>✕</button></div>
+  <div class="dlg-body"><div id="serversBody" class="stack"></div>
+    <div id="srvLogBox" class="logwrap" style="display:none;min-height:0">
+      <div class="loghead"><span class="title" id="srvLogTitle"></span><span id="srvLogState"></span></div>
+      <pre id="srvLog" class="mono dlglog"></pre>
+    </div></div>
+  <div class="dlg-foot"><span class="err" id="serversErr"></span>
+    <button class="btn" data-close data-i18n="Cancel"></button><button class="btn primary" id="saveServers" data-i18n="Save"></button></div>
+</div></dialog>
+
+<!-- Git services -->
+<dialog id="dlgGit"><div class="dlg">
+  <div class="dlg-head"><h3 data-i18n="Git services"></h3><button class="btn ghost" data-close>✕</button></div>
+  <div class="dlg-body"><div id="gitBody" class="stack"></div>
+    <div id="gitLogBox" class="logwrap" style="display:none;min-height:0">
+      <div class="loghead"><span class="title" id="gitLogTitle"></span><span id="gitLogState"></span></div>
+      <pre id="gitLog" class="mono dlglog"></pre>
+    </div></div>
+  <div class="dlg-foot"><span class="err" id="gitErr"></span>
+    <button class="btn" data-close data-i18n="Cancel"></button><button class="btn primary" id="saveGit" data-i18n="Save"></button></div>
+</div></dialog>
+
+<!-- Project -->
+<dialog id="dlgProject"><div class="dlg">
+  <div class="dlg-head"><h3 id="projectTitle"></h3><button class="btn ghost" data-close>✕</button></div>
+  <div class="dlg-body" id="projectBody"></div>
+  <div class="dlg-foot"><button class="btn" id="deleteProject" style="color:var(--prod)" data-i18n="Delete project"></button>
+    <span class="err" id="projectErr"></span>
+    <button class="btn" data-close data-i18n="Cancel"></button><button class="btn primary" id="saveProject" data-i18n="Save"></button></div>
+</div></dialog>
+
+<!-- Password prompt during connection -->
+<dialog id="dlgPass" style="width:min(460px,94vw)"><form class="dlg" id="passForm">
+  <div class="dlg-head"><h3 id="passTitle"></h3></div>
+  <div class="dlg-body" style="gap:10px">
+    <div id="passServer" class="small muted"></div>
+    <div id="passRetry" class="small" style="color:var(--prod);display:none" data-i18n="Wrong password, please try again."></div>
+    <div id="passPrompt" class="mono small"></div>
+    <input type="password" id="passInput" autocomplete="off">
+    <label class="chk"><input type="checkbox" id="passRemember"> <span data-i18n="Remember in Keychain"></span></label>
+  </div>
+  <div class="dlg-foot"><span class="spacer"></span>
+    <button class="btn" type="button" id="passCancel" data-i18n="Cancel"></button>
+    <button class="btn primary" type="submit" data-i18n="Connect"></button></div>
+</form></dialog>
+
+<!-- Public key -->
+<dialog id="dlgKey" style="width:min(640px,94vw)"><div class="dlg">
+  <div class="dlg-head"><h3 id="keyTitle"></h3><button class="btn ghost" data-close>✕</button></div>
+  <div class="dlg-body" id="keyBody"></div>
+  <div class="dlg-foot"><span class="spacer"></span><button class="btn primary" data-close data-i18n="Done"></button></div>
+</div></dialog>
+
+<script>
+/* ---------------- i18n ---------------- */
+// English strings are the keys; translations live in locales/<lang>.json
+let LANG = 'en', DICT = {};
+function t(key, ...args) {
+  let s = (LANG !== 'en' && DICT[key]) || key;
+  args.forEach((a, i) => { s = s.split('{' + i + '}').join(a); });
+  return s;
+}
+async function loadLang(lang) {
+  LANG = ['en', 'uk', 'ru'].includes(lang) ? lang : 'en';
+  DICT = {};
+  if (LANG !== 'en') {
+    try { DICT = await (await fetch('/locales/' + LANG + '.json')).json(); } catch {}
+  }
+  document.documentElement.lang = LANG;
+  $('#langSel').value = LANG;
+  applyStatic();
+}
+function applyStatic() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.dataset.i18nKey ??= el.dataset.i18n; el.textContent = t(el.dataset.i18nKey); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+}
+
+/* ---------------- helpers ---------------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const TRL = {а:'a',б:'b',в:'v',г:'h',ґ:'g',д:'d',е:'e',є:'ie',ж:'zh',з:'z',и:'y',і:'i',ї:'i',й:'i',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'shch',ь:'',ю:'iu',я:'ia',ё:'e',ы:'y',э:'e',ъ:''};
+const slug = s => String(s||'').toLowerCase().replace(/[а-яіїєґёыэъ]/g, c => TRL[c] ?? '')
+  .replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'');
+// internal technical id (used in file names on the server; never shown to the user)
+const uniqueId = (base, taken) => { let id = base, n = 2; while (taken.includes(id)) id = `${base}-${n++}`; return id; };
+const normUrl = u => String(u||'').trim().toLowerCase().replace(/\/+$/,'').replace(/\.git$/,'');
+function copyText(text) {
+  const fallback = () => { const a = document.createElement('textarea'); a.value = text; document.body.appendChild(a);
+    a.select(); try { document.execCommand('copy'); } catch {} a.remove(); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(fallback); else fallback();
+}
+
+async function api(path, body = {}) {
+  const r = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json','X-Deployer':'1'}, body:JSON.stringify(body)});
+  const ct = r.headers.get('Content-Type') || '';
+  if (ct.includes('application/json')) {
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    return d;
+  }
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r;
+}
+
+let cfg = {servers:[], projects:[]};
+let current = null;      // project id
+let status = null;       // git status of the current project
+let busy = false;
+
+function lastProject(){ try { return localStorage.getItem('deployer.project'); } catch { return null; } }
+function rememberProject(id){ try { localStorage.setItem('deployer.project', id); } catch {} }
+const stripUiFlags = c => { c.projects.forEach(x => x.environments.forEach(e => { if (e.db) delete e.db.has_password; })); return c; };
+
+async function loadConfig() {
+  try { cfg = await api('/api/config/get'); }
+  catch (e) { $('#main').innerHTML = `<div class="card" style="color:var(--prod)">${esc(e.message)}</div>`; return; }
+  if (LANG !== (cfg.lang || 'en')) await loadLang(cfg.lang || 'en');
+  if (!cfg.projects.find(p => p.id === current)) {
+    const last = lastProject();
+    current = (cfg.projects.find(p => p.id === last) || cfg.projects[0] || {}).id || null;
+  }
+  renderSidebar(); renderMain();
+}
+
+function serverById(id){ return cfg.servers.find(s => s.id === id); }
+function proj(){ return cfg.projects.find(p => p.id === current); }
+
+/* ---------------- sidebar ---------------- */
+function renderSidebar() {
+  const el = $('#projects');
+  if (!cfg.projects.length) { el.innerHTML = `<div class="empty">${t('No projects yet')}</div>`; return; }
+  el.innerHTML = cfg.projects.map(p => `
+    <button class="item ${p.id===current?'active':''}" data-id="${esc(p.id)}">
+      ${esc(p.name)}<span class="sub">${esc(p.environments.map(e=>e.name).join(' · '))}</span>
+    </button>`).join('');
+  el.querySelectorAll('.item').forEach(b => b.onclick = () => {
+    if (busy) return;
+    current = b.dataset.id; rememberProject(current); status = null; renderSidebar(); renderMain();
+  });
+}
+
+/* ---------------- main screen ---------------- */
+function renderMain() {
+  const m = $('#main');
+  if (!cfg.servers.length) {
+    m.innerHTML = `<div class="empty-main"><h2>${t('Start with a server')}</h2>
+      <p>${t('Add a server (IP, user and SSH key), then add projects and their environments (DEV / PROD).')}</p>
+      <button class="btn primary" onclick="openServers()">${t('Add server')}</button></div>`;
+    return;
+  }
+  const p = proj();
+  if (!p) {
+    m.innerHTML = `<div class="empty-main"><h2>${t('Add your first project')}</h2>
+      <p>${t('Choose a local folder with a git repository and where to deploy it on the server.')}</p>
+      <button class="btn primary" onclick="openProject()">${t('＋ Project')}</button></div>`;
+    return;
+  }
+  m.innerHTML = `
+    <div class="card phead">
+      <div class="grow">
+        <h2>${esc(p.name)}</h2>
+        <div class="muted mono">${esc(p.path)}</div>
+        <div class="badges" id="pstatus"><span class="badge">⏳ ${t('Checking git…')}</span></div>
+      </div>
+      <button class="btn" id="btnRefresh" title="${t('Refresh git status')}">↻</button>
+      <button class="btn" id="btnEdit">⚙︎ ${t('Settings')}</button>
+    </div>
+    <div class="card">
+      <div class="gitrow"><span class="lbl">${t('Changes')}</span>
+        <a href="#" class="small" id="gChanges" title="${t('Show the list in the log')}">…</a>
+        <input type="text" id="commitMsg" placeholder="${t('What changed (commit message)')}">
+        <button class="btn" id="btnCommit" title="${t('Record all changes with this message (git add -A + commit)')}">✓ ${t('Commit')}</button></div>
+      <div class="gitrow"><span class="lbl">${t('Repositories')}</span>
+        <span class="chips" id="gRemotes"><span class="muted small">…</span></span>
+        <button class="btn primary" id="btnPush" title="${t('Send the current branch to the selected repositories, without deploying')}">⬆ ${t('Push')}</button></div>
+    </div>
+    <div class="envs">${p.environments.map(envCard).join('')}</div>
+    <div class="logwrap">
+      <div class="loghead"><span class="title" id="logTitle">${t('Log')}</span><span id="logState"></span>
+        <button class="btn" id="btnCopyLog">${t('Copy')}</button><button class="btn" id="btnClearLog">${t('Clear')}</button></div>
+      <pre id="log" class="mono"><span class="muted">${t('Command output will appear here.')}</span></pre>
+    </div>
+    <datalist id="branches"></datalist>`;
+  $('#btnRefresh').onclick = loadStatus;
+  $('#btnCommit').onclick = doCommit;
+  $('#commitMsg').onkeydown = ev => { if (ev.key === 'Enter') doCommit(); };
+  $('#btnPush').onclick = doPush;
+  $('#gChanges').onclick = ev => { ev.preventDefault();
+    if (status && status.dirty_count) { $('#logTitle').textContent = t('Uncommitted changes'); $('#logState').innerHTML = '';
+      $('#log').textContent = status.dirty.join('\n') + (status.dirty_count > status.dirty.length ? '\n…' : ''); } };
+  $('#btnEdit').onclick = () => openProject(p.id);
+  $('#btnClearLog').onclick = () => { $('#log').textContent=''; $('#logState').innerHTML=''; };
+  $('#btnCopyLog').onclick = () => copyText($('#log').innerText);
+  m.querySelectorAll('[data-act]').forEach(b => b.onclick = () =>
+    (b.dataset.act === 'repokey' && p.git_key_mode === 'shared') ? showLocalKey(gitKeyPath(), false, 'git')
+      : run(b.dataset.env, b.dataset.act));
+  loadStatus();
+}
+
+function envCard(e) {
+  const s = serverById(e.server);
+  const prot = e.protect;
+  return `<div class="card env ${prot?'protect':''}">
+    <div class="ehead"><span class="tag">${esc(e.name)}</span>${prot?`<span class="badge err">${t('confirmation required')}</span>`:''}
+      <span class="muted small" style="margin-left:auto">${s?esc(s.name)+' · '+esc(s.host):`<span style="color:var(--prod)">${t('server not found')}</span>`}</span></div>
+    <div class="muted mono small" title="${esc(e.target)}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.target)}</div>
+    <div class="info" id="einfo-${esc(e.id)}"></div>
+    <div class="row"><span class="small muted">${t('Branch / commit')}</span>
+      <input type="text" list="branches" id="ref-${esc(e.id)}" value="${esc(e.branch)}" class="mono"></div>
+    <div class="row"><label class="chk" title="${t('Push the branch to the selected repositories before deploying')}"><input type="checkbox" id="push-${esc(e.id)}" checked> ${t('Push to Git first')}</label></div>
+    <div class="btns">
+      <button class="btn" data-env="${esc(e.id)}" data-act="check" title="${t('Check the connection, folder, repository access and database')}">${t('Check')}</button>
+      <button class="btn" data-env="${esc(e.id)}" data-act="repokey" title="${t('Show the key the server uses to access the repository')}">🔑</button>
+      <button class="btn" data-env="${esc(e.id)}" data-act="preview" title="${t('Show the commits and files that will change (nothing is changed on the server)')}">${t('Preview')}</button>
+      <button class="btn ${prot?'danger':'primary'}" data-env="${esc(e.id)}" data-act="deploy">🚀 ${t('Deploy')}</button>
+    </div>
+  </div>`;
+}
+
+async function loadStatus() {
+  const p = proj(); if (!p) return;
+  const box = $('#pstatus'); if (!box) return;
+  box.innerHTML = `<span class="badge">⏳ ${t('Checking git…')}</span>`;
+  try { status = await api('/api/status', {project:p.id}); }
+  catch (e) { box.innerHTML = `<span class="badge err">${esc(e.message)}</span>`; return; }
+  if (p.id !== current) return;
+  if (!status.ok) { box.innerHTML = `<span class="badge err">⚠ ${esc(status.error)}</span>`; return; }
+  const b = [`<span class="badge">⎇ ${esc(status.branch)}</span>`];
+  renderGitCard();
+  if (status.fetch_error) b.push(`<span class="badge err" title="${esc(status.fetch_error)}">${t('git fetch failed')}</span>`);
+  box.innerHTML = b.join('');
+  $('#branches').innerHTML = status.branches.map(x => `<option value="${esc(x)}">`).join('');
+  const dr = (status.remotes || []).find(r => r.deploy);
+  const G = esc(dr ? (dr.service || dr.name) : 'Git');
+  for (const e of p.environments) {
+    const i = status.envs[e.id], el = document.getElementById('einfo-'+e.id);
+    if (!i || !el) continue;
+    const br = esc(i.branch);
+    let h;
+    if (!i.local) h = `<span class="muted">${t('no local branch {0}: deploys from {1} as is', br, G)}</span>`;
+    else if (i.no_remote) h = `<span style="color:var(--warn)">${t('branch {0} is not in {1} yet: it will be pushed', br, G)}</span>`;
+    else if (i.ahead && i.behind) h = `<span style="color:var(--prod)">${t('{0}: diverged from {1} (+{2} / −{3}), pull first', br, G, i.ahead, i.behind)}</span>`;
+    else if (i.ahead) h = `<span style="color:var(--warn)">${t('{0}: {1} unpushed commit(s), will be pushed before deploy', br, i.ahead)}</span>`;
+    else if (i.behind) h = `<span class="muted">${t('{0}: {1} is {2} commit(s) ahead of local', br, G, i.behind)}</span>`;
+    else h = `<span class="muted">${t('{0}: in sync with {1}', br, G)}</span>`;
+    el.innerHTML = h;
+  }
+}
+
+function renderGitCard() {
+  const ch = $('#gChanges'); if (!ch || !status || !status.ok) return;
+  ch.textContent = status.dirty_count ? '● ' + t('{0} uncommitted file(s)', status.dirty_count) : '✓ ' + t('everything committed');
+  ch.style.color = status.dirty_count ? 'var(--warn)' : 'var(--muted)';
+  $('#btnCommit').disabled = busy || !status.dirty_count;
+  const rs = status.remotes || [];
+  $('#gRemotes').innerHTML = rs.length ? rs.map(r => {
+    let st;
+    if (r.no_branch) st = `<span class="st warn">${t('no branch {0} there yet', esc(status.branch))}</span>`;
+    else if (r.ahead && r.behind) st = `<span class="st warn">↑${r.ahead} ↓${r.behind}</span>`;
+    else if (r.ahead) st = `<span class="st warn">↑${r.ahead} ${t('not pushed')}</span>`;
+    else if (r.behind) st = `<span class="st">↓${r.behind} ${t('newer there')}</span>`;
+    else st = '<span class="st ok">✓</span>';
+    const extra = r.also && r.also.length ? ' ' + t('(+{0} more push URL)', r.also.length) : '';
+    return `<label class="chip" title="${esc(r.url + extra)}"><input type="checkbox" class="pushr" value="${esc(r.name)}" ${r.push?'checked':''}>
+      <b>${esc(r.service || r.name)}</b> <span class="mono small muted">${esc(r.name)}</span> ${st}
+      ${r.deploy ? `<span class="srv" title="${t('The server pulls the code from here when deploying')}">${t('server')}</span>` : ''}</label>`;
+  }).join('') : `<span class="muted small">${t('No repositories connected: add them in ⚙︎ Settings')}</span>`;
+}
+
+async function runStream(url, body, title, after) {
+  if (busy) return;
+  setBusy(true); $('#log').textContent = '';
+  let ok = false;
+  try { ok = await streamTo(title, await api(url, body)); }
+  catch (err) { $('#log').innerHTML = `<span class="err">❌ ${esc(err.message)}</span>`;
+    $('#logState').innerHTML = `<span class="status-pill fail">${t('failed')}</span>`; }
+  finally { setBusy(false); await loadStatus(); if (after) after(ok); }
+}
+function doCommit() {
+  const p = proj(), msg = $('#commitMsg').value.trim();
+  if (!msg) { $('#commitMsg').focus(); $('#commitMsg').placeholder = t('Describe what changed first'); return; }
+  runStream('/api/git/commit', {project:p.id, message:msg}, `${t('Commit')}: ${p.name}`, ok => { if (ok) $('#commitMsg').value = ''; });
+}
+function doPush() {
+  const p = proj();
+  const remotes = [...document.querySelectorAll('.pushr:checked')].map(x => x.value);
+  if (!remotes.length) { alert(t('Select the repositories to push to.')); return; }
+  if (status && status.dirty_count && !confirm(t('There are {0} uncommitted change(s): they will NOT be pushed (commit first).\n\nPush what is committed?', status.dirty_count))) return;
+  runStream('/api/git/push', {project:p.id, remotes}, `${t('Push')}: ${p.name} (${status ? status.branch : ''}) → ${remotes.join(', ')}`);
+}
+
+/* ---------------- running jobs ---------------- */
+let passTimer = null, passId = null;
+const passDone = new Set();
+function setBusy(v) {
+  busy = v;
+  if (v) { clearInterval(passTimer); passTimer = setInterval(pollAskpass, 500); }
+  else { clearInterval(passTimer); passTimer = null; passId = null; if ($('#dlgPass').open) $('#dlgPass').close(); }
+  document.querySelectorAll('[data-act], #btnEdit, #btnServers, #btnGit, #btnNewProject, #btnCommit, #btnPush').forEach(b => b.disabled = v);
+}
+
+function colorize(text) {
+  return text.split('\n').map(l => {
+    const e = esc(l);
+    if (/^\[exit \d+\]$/.test(l)) return '';
+    if (l.includes('❌')) return `<span class="err">${e}</span>`;
+    if (l.includes('⚠')) return `<span class="wrn">${e}</span>`;
+    if (l.includes('✅') || l.trimStart().startsWith('✓')) return `<span class="ok">${e}</span>`;
+    if (l.startsWith('══')) return `<span class="hd">${e}</span>`;
+    if (l.startsWith('→')) return `<span class="info">${e}</span>`;
+    if (/^\*deleting/.test(l)) return `<span class="err">${e}</span>`;
+    return e;
+  }).join('\n');
+}
+
+async function streamTo(title, resp, ids = {log:'#log', title:'#logTitle', state:'#logState'}) {
+  const log = $(ids.log), stateEl = $(ids.state);
+  $(ids.title).textContent = title;
+  stateEl.innerHTML = `<span class="status-pill run">${t('running…')}</span>`;
+  let text = '';
+  const reader = resp.body.getReader(), dec = new TextDecoder();
+  for (;;) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    text += dec.decode(value, {stream:true});
+    log.innerHTML = colorize(text);
+    log.scrollTop = log.scrollHeight;
+  }
+  const m = text.match(/\[exit (\d+)\]\s*$/);
+  const ok = m && m[1] === '0';
+  stateEl.innerHTML = ok ? `<span class="status-pill ok">${t('success')}</span>`
+    : `<span class="status-pill fail">${t('failed')}${m ? ' (' + t('code {0}', m[1]) + ')' : ''}</span>`;
+  return ok;
+}
+
+async function run(envId, mode) {
+  if (busy) return;
+  const p = proj(), e = p.environments.find(x => x.id === envId);
+  const ref = $('#ref-'+envId).value.trim() || e.branch;
+  const push = $('#push-'+envId).checked;
+  if (mode === 'deploy') {
+    if (status && status.dirty_count &&
+        !confirm(t('The project has {0} uncommitted change(s). They will NOT be deployed.\n\nContinue?', status.dirty_count))) return;
+    if (e.protect) {
+      const a = prompt(t('Deploy “{0}” → {1}\nBranch / commit: {2}\n\nTo confirm, type: {3}', p.name, e.name, ref, e.name));
+      if (a === null) return;
+      if (a.trim().toLowerCase() !== e.name.trim().toLowerCase()) { alert(t('Does not match, deploy cancelled.')); return; }
+    } else if (!confirm(t('Deploy “{0}” → {1}\nBranch / commit: {2}', p.name, e.name, ref))) return;
+  }
+  const names = {check: t('Check'), preview: t('Preview'), deploy: t('Deploy'), repokey: t('Repository key')};
+  setBusy(true);
+  $('#log').textContent = '';
+  try {
+    const r = await api('/api/run', {project:p.id, env:e.id, mode, ref, push});
+    await streamTo(`${names[mode]}: ${p.name} → ${e.name} (${ref})`, r);
+  } catch (err) {
+    $('#log').innerHTML = `<span class="err">❌ ${esc(err.message)}</span>`;
+    $('#logState').innerHTML = `<span class="status-pill fail">${t('failed')}</span>`;
+  } finally {
+    setBusy(false);
+    if (mode === 'deploy') loadStatus();
+  }
+}
+
+/* ---------------- password prompt during connection ---------------- */
+async function pollAskpass() {
+  if (passId) return;
+  let r; try { r = await api('/api/askpass/pending'); } catch { return; }
+  const it = (r.prompts || []).find(x => !passDone.has(x.id));
+  if (!it || passId) return;
+  passId = it.id;
+  $('#passTitle').textContent = it.kind === 'passphrase' ? t('SSH key passphrase') : t('Server login password');
+  $('#passServer').textContent = it.server;
+  $('#passPrompt').textContent = it.prompt;
+  $('#passRetry').style.display = it.retry ? '' : 'none';
+  $('#passInput').value = ''; $('#passRemember').checked = false;
+  $('#dlgPass').showModal(); $('#passInput').focus();
+}
+async function answerPass(answer) {
+  const id = passId; if (!id) return;
+  passDone.add(id); passId = null;
+  const remember = $('#passRemember').checked;
+  $('#passInput').value = '';
+  if ($('#dlgPass').open) $('#dlgPass').close();
+  try { await api('/api/askpass/answer', {id, answer, remember}); } catch {}
+}
+$('#passForm').onsubmit = ev => { ev.preventDefault(); answerPass($('#passInput').value); };
+$('#passCancel').onclick = () => answerPass(null);
+$('#dlgPass').addEventListener('cancel', ev => { ev.preventDefault(); answerPass(null); });
+
+/* ---------------- forms: shared ---------------- */
+function bindForm(root, draft, onChange) {
+  root.oninput = root.onchange = ev => {
+    const el = ev.target, path = el.dataset.path;
+    if (!path) return;
+    let v = el.type === 'checkbox' ? el.checked : el.value;
+    if (el.dataset.type === 'lines') v = el.value.split('\n');
+    if (el.dataset.type === 'int') v = parseInt(el.value, 10) || '';
+    const keys = path.split('.');
+    let o = draft;
+    for (let i = 0; i < keys.length - 1; i++) o = o[keys[i]] ??= {};
+    o[keys.at(-1)] = v;
+    onChange && onChange(path, el, ev.type);
+  };
+}
+const fld = (label, path, val, opts = {}) => `<label class="f ${opts.cls||'c6'}"><span>${label}</span>
+  <input type="${opts.type||'text'}" data-path="${path}" value="${esc(val)}" ${opts.type==='number'?'data-type="int"':''}
+   placeholder="${esc(opts.ph||'')}" ${opts.mono?'class="mono"':''} autocomplete="off" spellcheck="false"></label>`;
+
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+
+/* ---------------- servers ---------------- */
+let sdraft, sshKeys = [];
+async function openServers() {
+  sdraft = clone(cfg.servers);
+  sdraft.forEach(x => { x.auth ??= 'key'; x.secret = ''; x.clear_secret = false; });
+  $('#serversErr').textContent = '';
+  $('#srvLogBox').style.display = 'none';
+  try { sshKeys = (await api('/api/sshkeys')).keys; } catch { sshKeys = []; }
+  if (!sdraft.length) sdraft.push(newServer());
+  renderServers();
+  if (!$('#dlgServers').open) $('#dlgServers').showModal();
+}
+function newServer() {
+  const k = sshKeys.find(x => /id_ed25519$/.test(x.path)) || sshKeys[0];
+  return {id:'srv-'+Date.now().toString(36), name:'', host:'', port:22, user:'', auth:'key',
+          key: k ? k.path : '~/.ssh/id_ed25519', secret:'', clear_secret:false};
+}
+function keyOptions(sel) {
+  const list = sshKeys.slice();
+  if (sel && !list.find(k => k.path === sel)) list.unshift({path: sel, encrypted: false});
+  return list.map(k => `<option value="${esc(k.path)}" ${k.path===sel?'selected':''}>${esc(k.path)}${k.encrypted?'  🔒 '+t('passphrase'):''}</option>`).join('')
+    || `<option value="">${t('(no keys found in ~/.ssh)')}</option>`;
+}
+function renderServers() {
+  const body = $('#serversBody');
+  body.innerHTML = `<div class="hint">${t('Sign in with an SSH key (recommended) or with a user name and password. Add this Mac’s public key to the server once (e.g. HestiaCP: User → SSH Keys, or ~/.ssh/authorized_keys).')}</div>` +
+    sdraft.map((s, i) => {
+      const isKey = s.auth !== 'password';
+      const k = sshKeys.find(x => x.path === s.key);
+      return `<div class="sub-card">
+      <div class="sub-head"><b>${esc(s.name || t('New server'))}</b>
+        <button class="btn" type="button" onclick="serverAction(${i},'check')">${t('Test connection')}</button>
+        <button class="btn" type="button" onclick="serverAction(${i},'serverkey')" title="${t('The server’s own default key for Git hosting')}">${t('Server Git key')}</button>
+        <button class="btn ghost" type="button" onclick="sdraft.splice(${i},1);renderServers()" title="${t('Delete')}">🗑</button></div>
+      <div class="grid">
+        ${fld(t('Name'), `${i}.name`, s.name, {cls:'c4', ph:t('Production server')})}
+        ${fld(t('IP / host'), `${i}.host`, s.host, {cls:'c4', ph:'203.0.113.10', mono:1})}
+        ${fld(t('SSH port'), `${i}.port`, s.port, {cls:'c2', type:'number'})}
+        ${fld(t('User'), `${i}.user`, s.user, {cls:'c2', ph:'admin', mono:1})}
+        <label class="f c4"><span>${t('Sign-in method')}</span>
+          <select data-path="${i}.auth"><option value="key" ${isKey?'selected':''}>${t('SSH key')}</option>
+            <option value="password" ${!isKey?'selected':''}>${t('User name and password')}</option></select></label>
+        ${isKey ? `<label class="f c8"><span>${t('Private key on this Mac')}</span>
+          <div class="inline"><select class="mono" data-path="${i}.key">${keyOptions(s.key)}</select>
+          <button class="btn" type="button" onclick="pickKey(${i})">${t('Choose file…')}</button>
+          <button class="btn" type="button" onclick="showLocalKey(sdraft[${i}].key)" title="${t('Show the public key to add it to the server')}">${t('Public key')}</button></div></label>` : '<div class="c8"></div>'}
+        <label class="f c6"><span>${isKey ? t('Key passphrase') : t('Password')} ${s.has_secret ? `<span style="color:var(--dev)">· ${t('saved in Keychain')}</span>` : ''}</span>
+          <input type="password" data-path="${i}.secret" value="${esc(s.secret||'')}" autocomplete="new-password"
+            placeholder="${s.has_secret ? t('leave unchanged') : (isKey && !(k && k.encrypted) ? t('only if the key has a passphrase') : t('empty = ask when connecting'))}"></label>
+        <div class="f c6" style="justify-content:flex-end">
+          ${s.has_secret ? `<label class="chk"><input type="checkbox" data-path="${i}.clear_secret" ${s.clear_secret?'checked':''}> ${t('forget the saved password')}</label>` : ''}
+          <span class="hint">${isKey ? (k && k.encrypted ? '🔒 ' + t('The key is passphrase-protected: save the passphrase here or enter it on each connection.') : t('Leave empty if the key has no passphrase.'))
+            : t('Password sign-in must be allowed on the server (PasswordAuthentication yes).')}</span></div>
+      </div></div>`; }).join('') +
+    `<div><button class="btn" type="button" onclick="sdraft.push(newServer());renderServers()">＋ ${t('Add server')}</button></div>
+     <div class="hint">${t('Passwords are stored only in the macOS Keychain. Git hosting and the shared Git key are configured in “⎇ Git”.')}</div>`;
+  bindForm(body, sdraft, (path) => {
+    const i = +path.split('.')[0];
+    if (path.endsWith('.name')) body.querySelectorAll('.sub-head b')[i].textContent = sdraft[i].name || t('New server');
+    if (path.endsWith('.auth') || path.endsWith('.key')) renderServers();
+  });
+}
+async function pickKey(i) {
+  const r = await api('/api/choose-key');
+  if (r.path) {
+    if (!sshKeys.find(k => k.path === r.path)) sshKeys.push({path: r.path, encrypted: r.encrypted});
+    sdraft[i].key = r.path; renderServers();
+  }
+}
+async function serverAction(i, action) {
+  const s = sdraft[i];
+  if (busy) return;
+  $('#serversErr').textContent = '';
+  const box = $('#srvLogBox'); box.style.display = '';
+  $('#srvLog').textContent = '';
+  setBusy(true);
+  try {
+    const r = await api('/api/server', {server:s, action});
+    box.scrollIntoView({block:'nearest'});
+    await streamTo((action === 'check' ? t('Connection test') : t('Server Git key')) + ': ' + (s.name || s.host), r,
+                   {log:'#srvLog', title:'#srvLogTitle', state:'#srvLogState'});
+  } catch (e) { $('#serversErr').textContent = e.message; box.style.display = 'none'; }
+  finally { setBusy(false); }
+}
+$('#saveServers').onclick = async () => {
+  const next = stripUiFlags(clone(cfg)); next.servers = sdraft;
+  for (const s of sdraft) if (!s.name && s.host) s.name = s.host;
+  try { cfg = await api('/api/config/save', {config:next}); $('#dlgServers').close(); renderSidebar(); renderMain(); }
+  catch (e) { $('#serversErr').textContent = e.message; }
+};
+
+/* ---------------- public keys ---------------- */
+const gitKeyPath = () => cfg.git_key || '~/.ssh/deployer_git';
+async function showLocalKey(path, generate = false, purpose = 'server') {
+  const body = $('#keyBody');
+  $('#keyTitle').textContent = purpose === 'git' ? t('Shared Git key') : t('This Mac’s public SSH key');
+  const hint = purpose === 'git'
+    ? t('Add this key to <b>every</b> repository you deploy from (the same key works for all):<br>• Bitbucket → repository → Repository settings → <b>Access keys</b><br>• GitHub → repository → Settings → <b>Deploy keys</b> (GitHub allows a key in one repository only)<br>• GitLab → project → Settings → Repository → <b>Deploy keys</b>')
+    : purpose === 'mac'
+    ? t('This Mac’s key for pushing. Add it to your profile in every Git service (Bitbucket: Personal settings → SSH keys; GitHub: Settings → SSH and GPG keys; GitLab: Preferences → SSH Keys).')
+    : t('Copy it and add it to the server (e.g. HestiaCP: User → <b>SSH Keys</b> → Add, or ~/.ssh/authorized_keys).');
+  try {
+    const k = await api('/api/localkey', {path, generate});
+    if (!k.exists) {
+      body.innerHTML = `<p>${t('Key {0} does not exist yet.', `<span class="mono">${esc(k.path)}</span>`)}</p>
+        <button class="btn primary" onclick="showLocalKey('${esc(path)}', true, '${purpose}')">${t('Create key')}</button>`;
+    } else {
+      body.innerHTML = `<p class="hint">${hint}</p>
+        <div class="keybox" id="pubkey">${esc(k.pub)}</div>
+        <div><button class="btn primary" onclick="copyText($('#pubkey').textContent);this.textContent='${t('Copied ✓')}'">${t('Copy')}</button></div>`;
+    }
+  } catch (e) { body.innerHTML = `<p style="color:var(--prod)">${esc(e.message)}</p>`; }
+  if (!$('#dlgKey').open) $('#dlgKey').showModal();
+}
+
+/* ---------------- Git services ---------------- */
+let svdraft, gdraft = '';
+async function openGit() {
+  svdraft = clone(cfg.git_services || []);
+  gdraft = gitKeyPath();
+  $('#gitErr').textContent = ''; $('#gitLogBox').style.display = 'none';
+  try { sshKeys = (await api('/api/sshkeys')).keys; } catch { sshKeys = []; }
+  renderGit();
+  if (!$('#dlgGit').open) $('#dlgGit').showModal();
+}
+const SVC_TYPES = () => ({bitbucket:'Bitbucket', github:'GitHub', gitlab:'GitLab', other:t('Other (Gitea, self-hosted…)')});
+const SVC_KEY_HINT = () => ({
+  bitbucket: 'Bitbucket → Personal settings → SSH keys',
+  github: 'GitHub → Settings → SSH and GPG keys',
+  gitlab: 'GitLab → Preferences → SSH Keys',
+  other: t('your profile settings → SSH keys')});
+function renderGit() {
+  const body = $('#gitBody');
+  const macKey = sshKeys.find(k => /id_rsa$|id_ed25519$/.test(k.path)) || sshKeys[0];
+  const types = SVC_TYPES(), hints = SVC_KEY_HINT();
+  body.innerHTML = `<div class="hint">${t('Commit and push run on this Mac with your regular SSH keys (same as in Terminal). This Mac’s public key must be added to your profile in every service.')}
+      ${macKey ? `<button class="btn link" type="button" onclick="showLocalKey('${esc(macKey.path)}', false, 'mac')">${t('Show this Mac’s key')}</button>` : ''}</div>` +
+    svdraft.map((sv, i) => `<div class="sub-card">
+      <div class="sub-head"><b>${esc(sv.name || t('New service'))}</b>
+        <button class="btn" type="button" onclick="checkService(${i})">${t('Test access from this Mac')}</button>
+        <button class="btn ghost" type="button" onclick="svdraft.splice(${i},1);renderGit()" title="${t('Delete')}">🗑</button></div>
+      <div class="grid">
+        ${fld(t('Name'), `${i}.name`, sv.name, {cls:'c4', ph:'GitLab'})}
+        <label class="f c4"><span>${t('Type')}</span><select data-path="${i}.type">${Object.entries(types).map(([k,v]) =>
+          `<option value="${k}" ${sv.type===k?'selected':''}>${v}</option>`).join('')}</select></label>
+        ${fld(t('Host'), `${i}.host`, sv.host, {cls:'c4', ph:'gitlab.com', mono:1})}
+        <div class="c12 hint">${t('Where to add this Mac’s key for pushing')}: ${hints[sv.type] || hints.other}.</div>
+      </div></div>`).join('') +
+    `<div><button class="btn" type="button" onclick="svdraft.push({id:'svc-'+Date.now().toString(36),name:'',type:'gitlab',host:''});renderGit()">＋ ${t('Add service')}</button></div>
+    <div class="sub-card">
+      <div class="sub-head"><b>${t('Shared Git key for servers')}</b>
+        <button class="btn" type="button" onclick="showLocalKey(gdraft, false, 'git')">${t('Show / create')}</button></div>
+      <div class="grid">
+        <label class="f c12"><span>${t('Key on this Mac that servers use to fetch code (no passphrase)')}</span>
+          <input type="text" class="mono" id="gitKeyInput" value="${esc(gdraft)}" oninput="gdraft=this.value" spellcheck="false"></label>
+        <div class="c12 hint">${t('Sent to the server only for the duration of a deploy and never stored there. Add its public part to the repositories’ Access / Deploy keys (or to your service profile). Used by projects set to “Shared Git key”.')}</div>
+      </div></div>`;
+  bindForm(body, svdraft, (path) => {
+    const i = +path.split('.')[0];
+    if (path.endsWith('.name')) body.querySelectorAll('.sub-head b')[i].textContent = svdraft[i].name || t('New service');
+    if (path.endsWith('.type')) renderGit();
+  });
+}
+async function checkService(i) {
+  const sv = svdraft[i]; if (busy) return;
+  $('#gitErr').textContent = '';
+  const box = $('#gitLogBox'); box.style.display = ''; $('#gitLog').textContent = '';
+  setBusy(true);
+  try { await streamTo(t('Access from this Mac') + ': ' + (sv.name || sv.host), await api('/api/git/service-check', {host: sv.host}),
+                       {log:'#gitLog', title:'#gitLogTitle', state:'#gitLogState'}); }
+  catch (e) { $('#gitErr').textContent = e.message; box.style.display = 'none'; }
+  finally { setBusy(false); }
+}
+$('#saveGit').onclick = async () => {
+  const next = stripUiFlags(clone(cfg));
+  next.git_services = svdraft.map(sv => ({...sv, name: sv.name || sv.host}));
+  next.git_key = (gdraft || '').trim() || '~/.ssh/deployer_git';
+  try { cfg = await api('/api/config/save', {config:next}); $('#dlgGit').close(); renderMain(); }
+  catch (e) { $('#gitErr').textContent = e.message; }
+};
+
+/* ---------------- project ---------------- */
+let pdraft, pOrigId, premotes = null;
+function newEnv(kind) {
+  const prod = kind === 'prod';
+  return {_new: true, id: '', name: prod?'PROD':'DEV', server:(cfg.servers[0]||{}).id||'',
+    branch: prod?'main':'develop', target:'/home/USER/web/DOMAIN/public_html', php:'', post_deploy:'',
+    excludes:['.env','uploads/'], only_from: prod?'main':'', protect: prod,
+    db:{name:'', user:'', host:'localhost'}};
+}
+function openProject(id) {
+  if (!cfg.servers.length) { openServers(); return; }
+  const p = cfg.projects.find(x => x.id === id);
+  pOrigId = p ? p.id : null;
+  pdraft = p ? clone(p) : {id:'', name:'', path:'', repo:'', git_key_mode:'shared', environments:[newEnv('dev'), newEnv('prod')]};
+  pdraft.environments.forEach(e => { e.db ??= {name:'',user:'',host:'localhost'}; e.db.password = ''; });
+  $('#projectTitle').textContent = p ? t('Settings: {0}', p.name) : t('New project');
+  $('#deleteProject').style.display = p ? '' : 'none';
+  $('#projectErr').textContent = '';
+  premotes = null;
+  renderProject();
+  $('#dlgProject').showModal();
+  loadRepos();
+}
+async function loadRepos() {
+  premotes = null; renderRepos();
+  try { const r = await api('/api/git/remotes', {path: pdraft.path}); premotes = r.ok ? r.remotes : false; }
+  catch { premotes = false; }
+  const names = (premotes || []).map(r => r.name);
+  if (premotes && premotes.length) {
+    if (!names.includes(pdraft.deploy_remote)) {
+      const byUrl = pdraft.repo && premotes.find(r => normUrl(r.url) === normUrl(pdraft.repo));
+      pdraft.deploy_remote = (byUrl || premotes.find(r => r.name === 'origin') || premotes[0]).name;
+    }
+    pdraft.push_remotes = (pdraft.push_remotes || []).filter(n => names.includes(n));
+    if (!pdraft.push_remotes.length) pdraft.push_remotes = [pdraft.deploy_remote];
+  }
+  renderRepos();
+}
+function renderRepos() {
+  const box = document.getElementById('repoBox'); if (!box) return;
+  if (premotes === null) { box.innerHTML = `<span class="muted small">${t('Loading…')}</span>`; return; }
+  if (premotes === false) { box.innerHTML = `<span class="muted small">${t('Choose a local folder that contains a git repository.')}</span>`; return; }
+  const svcOpts = (cfg.git_services || []).map(sv => `<option value="${esc(sv.id)}">${esc(sv.name)} (${esc(sv.host)})</option>`).join('');
+  box.innerHTML = (premotes.length ? premotes.map(r => `<div class="rrow">
+      <b>${esc(r.service || '—')}</b><span class="mono small">${esc(r.name)}</span>
+      <span class="mono small muted url" title="${esc(r.url)}">${esc(r.url)}</span>
+      <label class="chk"><input type="checkbox" data-rpush="${esc(r.name)}" ${(pdraft.push_remotes||[]).includes(r.name)?'checked':''}> ${t('push')}</label>
+      <label class="chk"><input type="radio" name="deployRemote" data-rdeploy="${esc(r.name)}" ${pdraft.deploy_remote===r.name?'checked':''}> ${t('server pulls from here')}</label>
+    </div>`).join('') : `<div class="muted small">${t('No repositories connected yet.')}</div>`) + `
+    <div class="grid" style="margin-top:10px">
+      <label class="f c3"><span>${t('Add: service')}</span><select id="newRSvc">${svcOpts}</select></label>
+      <label class="f c6"><span>${t('Repository (workspace/name or full URL)')}</span>
+        <input type="text" class="mono" id="newRUrl" placeholder="workspace/repo  |  git@github.com:user/repo.git" spellcheck="false"></label>
+      <label class="f c2"><span>${t('Remote name')}</span><input type="text" class="mono" id="newRName" placeholder="${t('auto')}" spellcheck="false"></label>
+      <div class="f c1" style="justify-content:flex-end"><button class="btn" type="button" id="newRAdd" title="${t('Add')}">＋</button></div>
+    </div>`;
+  box.querySelectorAll('[data-rpush]').forEach(c => c.onchange = () => {
+    const n = c.dataset.rpush, l = new Set(pdraft.push_remotes || []);
+    c.checked ? l.add(n) : l.delete(n); pdraft.push_remotes = [...l]; });
+  box.querySelectorAll('[data-rdeploy]').forEach(c => c.onchange = () => { if (c.checked) pdraft.deploy_remote = c.dataset.rdeploy; });
+  const add = document.getElementById('newRAdd');
+  if (add) add.onclick = async () => {
+    const sv = (cfg.git_services || []).find(x => x.id === $('#newRSvc').value) || {};
+    let url = $('#newRUrl').value.trim();
+    if (!url) return;
+    if (!/[@:]/.test(url)) url = `git@${sv.host}:${url.replace(/\.git$/,'')}.git`;
+    const taken = (premotes || []).map(r => r.name);
+    const name = $('#newRName').value.trim() || uniqueId(slug(sv.name || 'remote') || 'remote', taken);
+    try {
+      await api('/api/git/remote-add', {path: pdraft.path, name, url});
+      pdraft.push_remotes = [...(pdraft.push_remotes || []), name];
+      await loadRepos();
+    } catch (e) { $('#projectErr').textContent = e.message; }
+  };
+}
+function renderProject() {
+  const d = pdraft, body = $('#projectBody');
+  const srvOpts = sel => cfg.servers.map(s => `<option value="${esc(s.id)}" ${s.id===sel?'selected':''}>${esc(s.name)} (${esc(s.host)})</option>`).join('');
+  body.innerHTML = `
+    <div class="grid">
+      ${fld(t('Project name'), 'name', d.name, {cls:'c12', ph:t('My project')})}
+      <label class="f c12"><span>${t('Local project folder (git)')}</span>
+        <div class="inline"><input type="text" class="mono" data-path="path" value="${esc(d.path)}" placeholder="/Users/…/project" spellcheck="false">
+        <button class="btn" type="button" id="chooseFolder">${t('Choose…')}</button></div></label>
+      <label class="f c12"><span>${t('How the server accesses the repository')}</span><select data-path="git_key_mode">
+        <option value="shared" ${d.git_key_mode==='shared'?'selected':''}>${t('Shared Git key from this Mac (one key for all projects)')}</option>
+        <option value="" ${d.git_key_mode!=='shared'?'selected':''}>${t('Key on the server (per-project key or the user’s default key)')}</option></select></label>
+    </div>
+    <div class="section-title">${t('Repositories (where to push and where the server pulls from)')}</div>
+    <div class="sub-card" id="repoBox"></div>
+    <div class="section-title">${t('Environments (where to deploy: DEV, PROD…)')}</div>
+    ${d.environments.map((e, i) => `<div class="sub-card">
+      <div class="sub-head"><b style="color:${e.protect?'var(--prod)':'var(--dev)'}">${esc(e.name||t('Environment'))}</b>
+        <label class="chk"><input type="checkbox" data-path="environments.${i}.protect" ${e.protect?'checked':''}> ${t('production (requires confirmation)')}</label>
+        <button class="btn ghost" type="button" onclick="pdraft.environments.splice(${i},1);renderProject();renderRepos()" title="${t('Delete environment')}">🗑</button></div>
+      <div class="grid">
+        ${fld(t('Environment'), `environments.${i}.name`, e.name, {cls:'c4', ph:'DEV'})}
+        <label class="f c8"><span>${t('Server')}</span><select data-path="environments.${i}.server">${srvOpts(e.server)}</select></label>
+        ${fld(t('Path on the server'), `environments.${i}.target`, e.target, {cls:'c12', ph:'/home/user/web/example.com/public_html', mono:1})}
+        ${fld(t('Default branch'), `environments.${i}.branch`, e.branch, {cls:'c4', mono:1})}
+        ${fld(t('Allowed only from branch'), `environments.${i}.only_from`, e.only_from||'', {cls:'c4', ph:t('(any)'), mono:1})}
+        ${fld('PHP', `environments.${i}.php`, e.php||'', {cls:'c4', ph:'php8.2', mono:1})}
+        ${fld(t('Post-deploy command (runs in the site folder)'), `environments.${i}.post_deploy`, e.post_deploy||'', {cls:'c12', ph:'$PHP migrate.php', mono:1})}
+        <label class="f c12"><span>${t('Keep on the server (one per line: configs, uploads, cache)')}</span>
+          <textarea class="mono" rows="3" data-path="environments.${i}.excludes" data-type="lines" spellcheck="false">${esc((e.excludes||[]).join('\n'))}</textarea></label>
+        <div class="c12 section-title" style="margin:2px 0 -2px">${t('Database (backed up before each deploy; optional)')}</div>
+        ${fld(t('Database name'), `environments.${i}.db.name`, e.db.name||'', {cls:'c3', mono:1})}
+        ${fld(t('User'), `environments.${i}.db.user`, e.db.user||'', {cls:'c3', mono:1})}
+        ${fld(t('Host'), `environments.${i}.db.host`, e.db.host||'localhost', {cls:'c3', mono:1})}
+        <label class="f c3"><span>${t('Password')} ${e.db.has_password?`<span style="color:var(--dev)">· ${t('saved')}</span>`:''}</span>
+          <input type="password" data-path="environments.${i}.db.password" placeholder="${e.db.has_password?t('leave unchanged'):''}" autocomplete="new-password"></label>
+      </div></div>`).join('')}
+    <div class="inline" style="gap:8px">
+      <button class="btn" type="button" onclick="pdraft.environments.push(newEnv('dev'));renderProject();renderRepos()">＋ DEV</button>
+      <button class="btn" type="button" onclick="pdraft.environments.push(newEnv('prod'));renderProject();renderRepos()">＋ PROD</button></div>
+    <div class="hint">${t('The database password is stored in the macOS Keychain, not in the settings file.')}</div>`;
+  $('#chooseFolder').onclick = async () => {
+    const r = await api('/api/choose-folder');
+    if (r.path) {
+      pdraft.path = r.path;
+      if (!pdraft.name) pdraft.name = r.path.split('/').pop();
+      renderProject(); loadRepos();
+    }
+  };
+  renderRepos();
+  bindForm(body, pdraft, (path, el, type) => {
+    if (path === 'path') { if (type === 'change') loadRepos(); return; }
+    if (/protect$|\.name$/.test(path) && path !== 'name') {
+      const i = +path.split('.')[1], h = body.querySelectorAll('.sub-head b')[i], e = pdraft.environments[i];
+      h.textContent = e.name || t('Environment'); h.style.color = e.protect ? 'var(--prod)' : 'var(--dev)';
+    }
+  });
+}
+$('#saveProject').onclick = async () => {
+  const p = clone(pdraft);
+  const next = stripUiFlags(clone(cfg));
+  if (premotes && premotes.length) {
+    const dr = premotes.find(r => r.name === p.deploy_remote);
+    if (dr) p.repo = dr.url;
+  }
+  delete p.provider;
+  if (!p.id) p.id = uniqueId(slug(p.name) || slug((p.path||'').split('/').pop()) || 'project',
+                             next.projects.map(x => x.id));
+  const envIds = p.environments.filter(e => !e._new).map(e => e.id);
+  for (const e of p.environments) {
+    if (e._new) { e.id = uniqueId(slug(e.name) || 'env', envIds); envIds.push(e.id); }
+    delete e._new;
+  }
+  const idx = next.projects.findIndex(x => x.id === pOrigId);
+  if (idx >= 0) next.projects[idx] = p; else next.projects.push(p);
+  try {
+    cfg = await api('/api/config/save', {config:next});
+    current = p.id; rememberProject(current);
+    $('#dlgProject').close(); renderSidebar(); renderMain();
+  } catch (e) { $('#projectErr').textContent = e.message; }
+};
+$('#deleteProject').onclick = async () => {
+  if (!confirm(t('Remove project “{0}” from Deployer?\nFiles on this Mac and on the server are not touched.', pdraft.name))) return;
+  const next = stripUiFlags(clone(cfg));
+  next.projects = next.projects.filter(x => x.id !== pOrigId);
+  try { cfg = await api('/api/config/save', {config:next}); current = null; $('#dlgProject').close(); loadConfig(); }
+  catch (e) { $('#projectErr').textContent = e.message; }
+};
+
+/* ---------------- header ---------------- */
+$('#btnGit').onclick = openGit;
+$('#btnServers').onclick = openServers;
+$('#btnNewProject').onclick = () => openProject();
+$('#langSel').onchange = async () => {
+  const lang = $('#langSel').value;
+  const next = stripUiFlags(clone(cfg)); next.lang = lang;
+  try { cfg = await api('/api/config/save', {config:next}); } catch {}
+  await loadLang(lang); renderSidebar(); renderMain();
+};
+$('#btnQuit').onclick = async () => {
+  if (busy && !confirm(t('Something is still running. Stop anyway?'))) return;
+  if (!busy && !confirm(t('Stop Deployer?'))) return;
+  try { await api('/api/quit'); } catch {}
+  document.body.innerHTML = `<div class="empty-main" style="padding-top:20vh"><h2>${t('Deployer stopped')}</h2><p>${t('You can close this window. Open Deployer.app to start it again.')}</p></div>`;
+};
+
+applyStatic();
+loadConfig();
+</script>
+</body>
+</html>
