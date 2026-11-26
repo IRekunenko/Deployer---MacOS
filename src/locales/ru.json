@@ -170,7 +170,6 @@
   "Remember in Keychain": "Запомнить в Keychain",
   "Connect": "Подключиться",
   "Done": "Готово",
-
   "Could not save the password to Keychain: {0}": "Не удалось сохранить пароль в Keychain: {0}",
   "{0}: field “{1}” is required": "{0}: поле «{1}» обязательно",
   "{0}: id may contain only lowercase Latin letters, digits, - and _": "{0}: код может содержать только строчные латинские буквы, цифры, - и _",
@@ -216,7 +215,6 @@
   "Unknown action": "Неизвестное действие",
   "Fill in the IP, user and key": "Заполните IP, пользователя и ключ",
   "Fill in the IP and user": "Заполните IP и пользователя",
-
   "Connection works: {0}": "Подключение работает: {0}",
   "Access to {0} with the shared Git key:": "Доступ к {0} общим Git-ключом:",
   "Access to {0} with the server user's default key:": "Доступ к {0} стандартным ключом пользователя сервера:",
@@ -266,5 +264,13 @@
   "Copying files to {0}": "Копирую файлы в {0}",
   "files changed: {0} (deleted: {1})": "изменено файлов: {0} (удалено: {1})",
   "Done: {0}": "Готово: {0}",
-  "{0} not found": "{0} не найден"
+  "{0} not found": "{0} не найден",
+  "Repository URL": "Адрес репозитория",
+  "Edit": "Редактировать",
+  "Remove": "Удалить",
+  "also pushes to:": "также пушит в:",
+  "Remove this push URL": "Убрать этот адрес пуша",
+  "Disconnect repository “{0}” from this project?\nOnly the local git remote is removed; the repository itself is not touched.": "Отключить репозиторий «{0}» от проекта?\nУдаляется только локальный git remote, сам репозиторий не затрагивается.",
+  "Stop pushing “{0}” to {1}?": "Больше не пушить «{0}» в {1}?",
+  "Remote not found: {0}": "Remote не найден: {0}"
 }

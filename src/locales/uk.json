@@ -170,7 +170,6 @@
   "Remember in Keychain": "Запам’ятати в Keychain",
   "Connect": "Підключитися",
   "Done": "Готово",
-
   "Could not save the password to Keychain: {0}": "Не вдалося зберегти пароль у Keychain: {0}",
   "{0}: field “{1}” is required": "{0}: поле «{1}» обов'язкове",
   "{0}: id may contain only lowercase Latin letters, digits, - and _": "{0}: код може містити лише малі латинські літери, цифри, - та _",
@@ -216,7 +215,6 @@
   "Unknown action": "Невідома дія",
   "Fill in the IP, user and key": "Заповніть IP, користувача і ключ",
   "Fill in the IP and user": "Заповніть IP і користувача",
-
   "Connection works: {0}": "Підключення працює: {0}",
   "Access to {0} with the shared Git key:": "Доступ до {0} спільним Git-ключем:",
   "Access to {0} with the server user's default key:": "Доступ до {0} стандартним ключем користувача сервера:",
@@ -266,5 +264,13 @@
   "Copying files to {0}": "Копіюю файли в {0}",
   "files changed: {0} (deleted: {1})": "змінено файлів: {0} (видалено: {1})",
   "Done: {0}": "Готово: {0}",
-  "{0} not found": "{0} не знайдено"
+  "{0} not found": "{0} не знайдено",
+  "Repository URL": "Адреса репозиторію",
+  "Edit": "Редагувати",
+  "Remove": "Видалити",
+  "also pushes to:": "також пушить у:",
+  "Remove this push URL": "Прибрати цю адресу пушу",
+  "Disconnect repository “{0}” from this project?\nOnly the local git remote is removed; the repository itself is not touched.": "Відключити репозиторій «{0}» від проєкту?\nВидаляється лише локальний git remote, сам репозиторій не зачіпається.",
+  "Stop pushing “{0}” to {1}?": "Більше не пушити «{0}» у {1}?",
+  "Remote not found: {0}": "Remote не знайдено: {0}"
 }

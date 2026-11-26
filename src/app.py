@@ -322,7 +322,7 @@ def project_path(p):
 
 
 def _norm_url(u):
-    u = (u or "").strip().lower().rstrip("/")
+    u = re.sub(r"([^:])/{2,}", r"\1/", (u or "").strip().lower()).rstrip("/")
     return u[:-4] if u.endswith(".git") else u
 
 
@@ -917,6 +917,39 @@ class Handler(BaseHTTPRequestHandler):
                 c, _, err = git(path, "remote", "add", name, url)
                 if c:
                     raise ValueError("git remote add: " + err)
+                return self._json({"ok": True})
+            if route == "/api/git/remote-update":
+                path = os.path.expanduser(body.get("path") or "")
+                old = (body.get("name") or "").strip()
+                new = (body.get("new_name") or old).strip()
+                url = (body.get("url") or "").strip()
+                if old not in {r["name"] for r in list_remotes(path)}:
+                    raise ValueError(tr("Remote not found: {0}", old))
+                if not re.match(r"^[A-Za-z0-9._-]+$", new) or not url:
+                    raise ValueError(tr("Enter a remote name (Latin letters) and the repository URL"))
+                if new != old:
+                    c, _, err = git(path, "remote", "rename", old, new)
+                    if c:
+                        raise ValueError("git remote rename: " + err)
+                c, _, err = git(path, "remote", "set-url", new, url)
+                if c:
+                    raise ValueError("git remote set-url: " + err)
+                return self._json({"ok": True})
+            if route == "/api/git/remote-remove":
+                path = os.path.expanduser(body.get("path") or "")
+                name = (body.get("name") or "").strip()
+                if name not in {r["name"] for r in list_remotes(path)}:
+                    raise ValueError(tr("Remote not found: {0}", name))
+                c, _, err = git(path, "remote", "remove", name)
+                if c:
+                    raise ValueError("git remote remove: " + err)
+                return self._json({"ok": True})
+            if route == "/api/git/pushurl-remove":
+                path = os.path.expanduser(body.get("path") or "")
+                name, url = (body.get("name") or "").strip(), (body.get("url") or "").strip()
+                c, _, err = git(path, "remote", "set-url", "--delete", "--push", name, re.escape(url))
+                if c:
+                    raise ValueError("git remote set-url --delete: " + err)
                 return self._json({"ok": True})
             if route == "/api/sshkeys":
                 return self._json({"keys": ssh_keys()})
