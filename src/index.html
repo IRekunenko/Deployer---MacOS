@@ -101,7 +101,15 @@ pre .ok{color:var(--ok)}pre .err{color:var(--err)}pre .wrn{color:var(--wrn)}pre 
 .rrow label.chk{white-space:nowrap}
 .rrow .also{grid-column:3 / -1;margin-top:-6px;font-size:11.5px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .rrow .also .btn{height:20px;width:20px;padding:0;font-size:11px}
-.rrow.edit{grid-template-columns:minmax(0,140px) minmax(0,1fr) auto}
+.rrow.edit{grid-template-columns:minmax(0,150px) minmax(0,1fr) auto}
+.rrow.edit .acts{gap:6px}
+.rrow.edit .acts .btn{width:auto;height:34px;padding:0 12px}
+.rrow .pushedit{grid-column:1 / -1;display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) auto;gap:12px;align-items:center}
+.rrow .pushedit .lbl2{font-size:12px;color:var(--muted)}
+.rrow .pushedit .btn{width:34px;padding:0}
+.rrow .pushlist{grid-column:2 / -1;display:flex;flex-direction:column;gap:4px;font-size:12px}
+.rrow .pushlist div{display:flex;align-items:center;gap:6px}
+.rrow .pushlist .btn{height:20px;width:20px;padding:0;font-size:11px}
 .rrow:last-child{border-bottom:0}
 .rrow .url{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .empty-main{margin:auto;text-align:center;max-width:440px;color:var(--muted)}
@@ -788,11 +796,20 @@ function renderRepos() {
   if (premotes === false) { box.innerHTML = `<span class="muted small">${t('Choose a local folder that contains a git repository.')}</span>`; return; }
   const svcOpts = (cfg.git_services || []).map(sv => `<option value="${esc(sv.id)}">${esc(sv.name)} (${esc(sv.host)})</option>`).join('');
   box.innerHTML = (premotes.length ? premotes.map(r => {
-    if (editRemote === r.name) return `<div class="rrow edit">
+    if (editRemote === r.name) {
+      const extra = (r.push || []).filter(u => normUrl(u) !== normUrl(r.url));
+      return `<div class="rrow edit">
       <input type="text" class="mono" id="edRName" value="${esc(r.name)}" title="${t('Remote name')}" spellcheck="false">
       <input type="text" class="mono" id="edRUrl" value="${esc(r.url)}" title="${t('Repository URL')}" spellcheck="false">
-      <span class="acts" style="gap:6px"><button class="btn" type="button" id="edRCancel">${t('Cancel')}</button>
-        <button class="btn primary" type="button" id="edRSave">${t('Save')}</button></span></div>`;
+      <span class="acts"><button class="btn" type="button" id="edRCancel">${t('Cancel')}</button>
+        <button class="btn primary" type="button" id="edRSave">${t('Save')}</button></span>
+      ${extra.length ? `<span class="small muted">${t('also pushes to:')}</span><div class="pushlist">${extra.map(u => `<div>
+        <span class="mono">${esc(u)}</span><button class="btn" type="button" data-rdelurl="${esc(r.name)}" data-url="${esc(u)}" title="${t('Remove this push URL')}">✕</button></div>`).join('')}</div>` : ''}
+      <div class="pushedit"><span class="lbl2" title="${t('One push sends the code to several repositories at once')}">${t('Also push to:')}</span>
+        <input type="text" class="mono" id="edRPushUrl" placeholder="git@github.com:user/repo.git" spellcheck="false">
+        <button class="btn" type="button" id="edRPushAdd" title="${t('Add push URL')}">＋</button></div>
+    </div>`;
+    }
     const also = (r.push || []).filter(u => normUrl(u) !== normUrl(r.url));
     return `<div class="rrow">
       <b>${esc(r.service || '—')}</b><span class="mono small">${esc(r.name)}</span>
@@ -831,6 +848,12 @@ function renderRepos() {
     try { await api('/api/git/pushurl-remove', {path: pdraft.path, name: b.dataset.rdelurl, url: b.dataset.url}); await loadRepos(); }
     catch (e) { $('#projectErr').textContent = e.message; }
   });
+  const edPushAdd = document.getElementById('edRPushAdd');
+  if (edPushAdd) edPushAdd.onclick = async () => {
+    const url = $('#edRPushUrl').value.trim(); if (!url) return;
+    try { await api('/api/git/pushurl-add', {path: pdraft.path, name: editRemote, url}); await loadRepos(); }
+    catch (e) { $('#projectErr').textContent = e.message; }
+  };
   const edSave = document.getElementById('edRSave');
   if (edSave) {
     document.getElementById('edRCancel').onclick = () => { editRemote = null; renderRepos(); };

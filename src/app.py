@@ -944,6 +944,26 @@ class Handler(BaseHTTPRequestHandler):
                 if c:
                     raise ValueError("git remote remove: " + err)
                 return self._json({"ok": True})
+            if route == "/api/git/pushurl-add":
+                path = os.path.expanduser(body.get("path") or "")
+                name, url = (body.get("name") or "").strip(), (body.get("url") or "").strip()
+                rem = {r["name"]: r for r in list_remotes(path)}
+                if name not in rem:
+                    raise ValueError(tr("Remote not found: {0}", name))
+                if not url:
+                    raise ValueError(tr("Enter the repository URL"))
+                # The first explicit pushurl replaces the implicit one (the fetch URL),
+                # so keep pushing to the original repository too.
+                _, explicit, _ = git(path, "config", "--get-all", "remote.%s.pushurl" % name)
+                if not explicit.strip():
+                    c, _, err = git(path, "remote", "set-url", "--add", "--push", name, rem[name]["url"])
+                    if c:
+                        raise ValueError("git remote set-url --add --push: " + err)
+                if _norm_url(url) not in {_norm_url(u) for u in rem[name]["push"]} | {_norm_url(rem[name]["url"])}:
+                    c, _, err = git(path, "remote", "set-url", "--add", "--push", name, url)
+                    if c:
+                        raise ValueError("git remote set-url --add --push: " + err)
+                return self._json({"ok": True})
             if route == "/api/git/pushurl-remove":
                 path = os.path.expanduser(body.get("path") or "")
                 name, url = (body.get("name") or "").strip(), (body.get("url") or "").strip()

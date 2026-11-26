@@ -272,5 +272,9 @@
   "Remove this push URL": "Убрать этот адрес пуша",
   "Disconnect repository “{0}” from this project?\nOnly the local git remote is removed; the repository itself is not touched.": "Отключить репозиторий «{0}» от проекта?\nУдаляется только локальный git remote, сам репозиторий не затрагивается.",
   "Stop pushing “{0}” to {1}?": "Больше не пушить «{0}» в {1}?",
-  "Remote not found: {0}": "Remote не найден: {0}"
+  "Remote not found: {0}": "Remote не найден: {0}",
+  "Add push URL": "Добавить адрес пуша",
+  "Enter the repository URL": "Укажите адрес репозитория",
+  "Also push to:": "Также пушить в:",
+  "One push sends the code to several repositories at once": "Один пуш отправляет код сразу в несколько репозиториев"
 }
